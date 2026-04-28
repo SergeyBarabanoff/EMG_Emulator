@@ -96,5 +96,34 @@
             android:layout_marginTop="20dp"
             android:text="1. Enable the accessibility service.\n2. Use Start Test Square for local testing.\n3. Use Python + network later for live EMG input." />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Connection Diagnostics"
+            android:textStyle="bold"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/connectionStatusTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Socket: unknown" />
+
+        <TextView
+            android:id="@+id/lastMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Last message: none" />
+
+        <TextView
+            android:id="@+id/lastCommandTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Last command: none" />
+
     </LinearLayout>
 </ScrollView>

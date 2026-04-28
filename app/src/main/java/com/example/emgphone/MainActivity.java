@@ -4,9 +4,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -20,6 +23,22 @@ public class MainActivity extends AppCompatActivity {
     private Button startTestSquareButton;
     private Button stopTestSquareButton;
 
+    private TextView connectionStatusTextView;
+    private TextView lastMessageTextView;
+    private TextView lastCommandTextView;
+
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+
+    private final Runnable diagnosticsUpdater = new Runnable() {
+        @Override
+        public void run() {
+            connectionStatusTextView.setText(ConnectionDiagnostics.socketStatus);
+            lastMessageTextView.setText(ConnectionDiagnostics.lastMessage);
+            lastCommandTextView.setText(ConnectionDiagnostics.lastCommand);
+            uiHandler.postDelayed(this, 500);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,6 +51,10 @@ public class MainActivity extends AppCompatActivity {
         openAccessibilityButton = findViewById(R.id.openAccessibilityButton);
         startTestSquareButton = findViewById(R.id.startTestSquareButton);
         stopTestSquareButton = findViewById(R.id.stopTestSquareButton);
+
+        connectionStatusTextView = findViewById(R.id.connectionStatusTextView);
+        lastMessageTextView = findViewById(R.id.lastMessageTextView);
+        lastCommandTextView = findViewById(R.id.lastCommandTextView);
 
         loadPrefs();
 
@@ -55,6 +78,18 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(EmgAccessibilityService.ACTION_STOP_TEST_SQUARE);
             sendBroadcast(intent);
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        uiHandler.post(diagnosticsUpdater);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        uiHandler.removeCallbacks(diagnosticsUpdater);
     }
 
     private void loadPrefs() {
