@@ -8,11 +8,26 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * Activity used for manual keyboard-based testing of cursor control.
+ *
+ * <p>This screen captures hardware keyboard input and converts supported keys into
+ * {@link PhoneCommand} broadcasts consumed by {@link EmgAccessibilityService}. It is intended as
+ * a debug or testing harness for verifying cursor movement and command handling without EMG input.</p>
+ */
 public class KeyboardTestActivity extends AppCompatActivity {
 
+    /** Displays the most recent keyboard action sent to the accessibility service. */
     private TextView statusTextView;
+
+    /** Root focusable view used to receive keyboard input. */
     private View rootView;
 
+    /**
+     * Initializes the keyboard test UI and requests focus so hardware key events are received.
+     *
+     * @param savedInstanceState previously saved state, or {@code null} if none exists
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,12 +43,33 @@ public class KeyboardTestActivity extends AppCompatActivity {
         statusTextView.setText("Keyboard test active. Click here, then use W/A/S/D, Space, H, R.");
     }
 
+    /**
+     * Re-requests focus when the activity resumes so that keyboard input keeps working.
+     */
     @Override
     protected void onResume() {
         super.onResume();
         rootView.requestFocus();
     }
 
+    /**
+     * Intercepts key presses and translates supported keys into {@link PhoneCommand} values.
+     *
+     * <p>Supported keys:
+     * <ul>
+     *     <li>W - move up</li>
+     *     <li>A - move left</li>
+     *     <li>S - move down</li>
+     *     <li>D - move right</li>
+     *     <li>Space - toggle touch</li>
+     *     <li>H - home</li>
+     *     <li>R - recents</li>
+     * </ul>
+     * Any unsupported key is passed to the default implementation.</p>
+     *
+     * @param event key event dispatched to the activity
+     * @return {@code true} if the event was handled, otherwise the superclass result
+     */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
@@ -83,6 +119,11 @@ public class KeyboardTestActivity extends AppCompatActivity {
         return super.dispatchKeyEvent(event);
     }
 
+    /**
+     * Broadcasts a manual command to the accessibility service.
+     *
+     * @param command command to send
+     */
     private void sendCommand(PhoneCommand command) {
         Intent intent = new Intent(EmgAccessibilityService.ACTION_MANUAL_COMMAND);
         intent.putExtra("command", command.name());
