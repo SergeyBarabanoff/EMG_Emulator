@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private Button openAccessibilityButton;
     private Button startTestSquareButton;
     private Button stopTestSquareButton;
+    private Button openKeyboardTestButton;
 
     private TextView connectionStatusTextView;
     private TextView lastMessageTextView;
@@ -77,6 +78,12 @@ public class MainActivity extends AppCompatActivity {
         stopTestSquareButton.setOnClickListener(v -> {
             Intent intent = new Intent(EmgAccessibilityService.ACTION_STOP_TEST_SQUARE);
             sendBroadcast(intent);
+        });
+
+        openKeyboardTestButton = findViewById(R.id.openKeyboardTestButton);
+        openKeyboardTestButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, KeyboardTestActivity.class);
+            startActivity(intent);
         });
     }
 

@@ -31,5 +31,8 @@
                 android:resource="@xml/emg_accessibility_service" />
         </service>
 
+        <activity
+            android:name=".KeyboardTestActivity"
+            android:exported="false" />
     </application>
 </manifest>
