@@ -126,6 +126,7 @@ public class KeyboardTestActivity extends AppCompatActivity {
      */
     private void sendCommand(PhoneCommand command) {
         Intent intent = new Intent(EmgAccessibilityService.ACTION_MANUAL_COMMAND);
+        intent.setPackage(getPackageName());
         intent.putExtra("command", command.name());
         sendBroadcast(intent);
     }

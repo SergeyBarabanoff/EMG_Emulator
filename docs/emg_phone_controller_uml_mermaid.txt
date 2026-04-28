@@ -1,0 +1,107 @@
+classDiagram
+direction LR
+
+class EMGApp {
+  +connect()
+  +disconnect()
+  +start_calibration()
+  +dispatch commands
+}
+class EMGSerialReader {
+  +connect(port, baud)
+  +disconnect()
+  +_read_loop()
+}
+class EMGProcessingWorker {
+  +start()
+  +stop()
+  +_run()
+}
+class AndroidBridgeServer {
+  +start()
+  +stop()
+  +broadcast(payload)
+}
+class PixhawkController {
+  +connect()
+  +send_json(payload)
+  +arm()
+  +land()
+  +stop_motion()
+}
+class EMGChannelPreprocessor {
+  +process(rawChannels)
+}
+class MultiMuscleDetector {
+  +update(...)
+}
+class CommandStabilizer {
+  +update(className,...)
+}
+class SessionLogWriter {
+  +start()
+  +stop()
+  +submit(row)
+}
+class Sample {
+  +timestamp
+  +packet_counter
+  +ch1 ch2 ch3
+  +f1 f2 f3
+}
+
+class MainActivity {
+  +onCreate()
+  +loadPrefs()
+  +savePrefs()
+}
+class KeyboardTestActivity {
+  +onCreate()
+  +dispatchKeyEvent(event)
+}
+class EmgAccessibilityService {
+  +onServiceConnected()
+  +handleCommand(command)
+  +moveCursor(dx,dy)
+  +toggleTouchHold()
+  +startTestSquare()
+  +stopTestSquare()
+}
+class EmgSocketClient {
+  +start()
+  +stop()
+  +handleLine(line)
+}
+class PhoneCommand
+class CursorState {
+  +move(dx,dy,screenW,screenH)
+}
+class TouchHoldState {
+  +isHeld()
+  +toggle()
+  +reset()
+}
+class TestSquareSequence {
+  +buildSequence(stepsPerSide)
+}
+class ConnectionDiagnostics
+
+EMGApp --> EMGSerialReader
+EMGSerialReader --> Sample
+EMGProcessingWorker --> Sample : consumes
+EMGProcessingWorker --> EMGChannelPreprocessor
+EMGProcessingWorker --> MultiMuscleDetector
+EMGProcessingWorker --> CommandStabilizer
+EMGProcessingWorker --> SessionLogWriter
+EMGApp --> EMGProcessingWorker
+EMGApp --> AndroidBridgeServer : broadcasts
+EMGApp --> PixhawkController : optional drone
+EmgAccessibilityService --> EmgSocketClient
+EmgSocketClient --> AndroidBridgeServer : TCP JSON
+EmgSocketClient --> PhoneCommand
+EmgAccessibilityService --> PhoneCommand
+MainActivity --> EmgAccessibilityService : broadcasts config/test
+MainActivity --> KeyboardTestActivity : opens
+KeyboardTestActivity --> EmgAccessibilityService : manual commands
+MainActivity --> ConnectionDiagnostics : reads
+EmgSocketClient --> ConnectionDiagnostics : updates
