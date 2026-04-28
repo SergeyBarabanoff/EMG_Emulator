@@ -59,11 +59,14 @@ public class EmgSocketClient {
                 int port = portProvider.getPort();
 
                 try {
-                    statusListener.onStatus("Connecting to " + host + ":" + port);
+                    ConnectionDiagnostics.socketStatus = "Socket: connecting to " + host + ":" + port;
+                    statusListener.onStatus(ConnectionDiagnostics.socketStatus);
 
                     Socket socket = new Socket();
                     socket.connect(new InetSocketAddress(host, port), 3000);
-                    statusListener.onStatus("Connected to " + host + ":" + port);
+
+                    ConnectionDiagnostics.socketStatus = "Socket: connected to " + host + ":" + port;
+                    statusListener.onStatus(ConnectionDiagnostics.socketStatus);
 
                     BufferedReader reader = new BufferedReader(
                             new InputStreamReader(socket.getInputStream())
@@ -71,13 +74,17 @@ public class EmgSocketClient {
 
                     String line;
                     while (running.get() && (line = reader.readLine()) != null) {
+                        ConnectionDiagnostics.lastMessage = "Last message: " + line;
                         handleLine(line);
                     }
 
+                    ConnectionDiagnostics.socketStatus = "Socket: disconnected";
+                    statusListener.onStatus(ConnectionDiagnostics.socketStatus);
                     socket.close();
 
                 } catch (Exception e) {
-                    statusListener.onStatus("Disconnected: " + e.getMessage());
+                    ConnectionDiagnostics.socketStatus = "Socket error: " + e.getMessage();
+                    statusListener.onStatus(ConnectionDiagnostics.socketStatus);
 
                     try {
                         Thread.sleep(1500);
@@ -106,9 +113,20 @@ public class EmgSocketClient {
             if ("command".equals(type)) {
                 String rawCommand = json.optString("command", "");
                 PhoneCommand command = PhoneCommand.fromString(rawCommand);
+                ConnectionDiagnostics.lastCommand = "Last command: " + command.name();
                 commandListener.onCommandReceived(command);
+
             } else if ("status".equals(type)) {
-                statusListener.onStatus(json.optString("message", ""));
+                statusListener.onStatus("Status msg: " + json.optString("message", ""));
+
+            } else if ("hello".equals(type)) {
+                statusListener.onStatus("Hello msg: " + json.optString("message", ""));
+
+            } else if ("heartbeat".equals(type)) {
+                statusListener.onStatus("Heartbeat received");
+
+            } else {
+                statusListener.onStatus("Unknown msg type: " + type);
             }
 
         } catch (Exception e) {
