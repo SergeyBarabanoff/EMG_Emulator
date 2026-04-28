@@ -165,7 +165,7 @@ public class EmgAccessibilityService extends AccessibilityService {
         filter.addAction(ACTION_START_TEST_SQUARE);
         filter.addAction(ACTION_STOP_TEST_SQUARE);
         filter.addAction(ACTION_MANUAL_COMMAND);
-        registerReceiver(controlReceiver, filter);
+        registerReceiver(controlReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
 
         reconnectSocket();
         updateStatus("Service started");

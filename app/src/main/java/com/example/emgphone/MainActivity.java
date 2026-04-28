@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         saveButton.setOnClickListener(v -> {
             savePrefs();
             Intent intent = new Intent(EmgAccessibilityService.ACTION_RELOAD_SETTINGS);
+            intent.setPackage(getPackageName());
             sendBroadcast(intent);
         });
 
@@ -120,11 +121,13 @@ public class MainActivity extends AppCompatActivity {
 
         startTestSquareButton.setOnClickListener(v -> {
             Intent intent = new Intent(EmgAccessibilityService.ACTION_START_TEST_SQUARE);
+            intent.setPackage(getPackageName());
             sendBroadcast(intent);
         });
 
         stopTestSquareButton.setOnClickListener(v -> {
             Intent intent = new Intent(EmgAccessibilityService.ACTION_STOP_TEST_SQUARE);
+            intent.setPackage(getPackageName());
             sendBroadcast(intent);
         });
 

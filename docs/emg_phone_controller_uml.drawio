@@ -1,0 +1,217 @@
+<mxfile host="app.diagrams.net" modified="2026-04-28T18:00:00.000Z" agent="OpenAI" version="24.7.17">
+  <diagram id="emg-uml" name="EMG Phone Controller UML">
+    <mxGraphModel dx="1800" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="EMG Phone Controller - UML Overview" style="text;html=1;fontSize=22;fontStyle=1;strokeColor=none;fillColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="760" y="20" width="700" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_group" value="Python Host Application" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=0;startSize=28;rounded=1;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="720" height="1020" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_emgapp" value="EMGApp&#xa;--------------------------------&#xa;+ connect()&#xa;+ disconnect()&#xa;+ start_calibration()&#xa;+ send/dispatch commands&#xa;&#xa;Coordinates host-side control flow and UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="150" width="280" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_reader" value="EMGSerialReader&#xa;--------------------------------&#xa;+ connect(port, baud)&#xa;+ disconnect()&#xa;+ _read_loop()&#xa;&#xa;Reads UDL binary packets from Arduino&#xa;and emits Sample objects" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="350" width="280" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_proc" value="EMGProcessingWorker&#xa;--------------------------------&#xa;+ start()&#xa;+ stop()&#xa;+ _run()&#xa;&#xa;Processes samples into filtered/envelope data,&#xa;detects patterns, emits command events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="550" width="280" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_bridge" value="AndroidBridgeServer&#xa;--------------------------------&#xa;+ start()&#xa;+ stop()&#xa;+ broadcast(payload)&#xa;&#xa;TCP server on host machine&#xa;Sends newline-delimited JSON to Android" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="770" width="280" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_pix" value="PixhawkController&#xa;--------------------------------&#xa;+ connect()&#xa;+ send_json(payload)&#xa;+ arm()/land()/stop_motion()&#xa;&#xa;Optional network drone output" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="960" width="280" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_pre" value="EMGChannelPreprocessor&#xa;--------------------------------&#xa;+ process(raw_channels)&#xa;&#xa;Bandpass / notch / RMS envelope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="350" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_det" value="MultiMuscleDetector&#xa;--------------------------------&#xa;+ update(...)&#xa;&#xa;Tracks per-channel active/inactive state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="500" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_stab" value="CommandStabilizer&#xa;--------------------------------&#xa;+ update(className, ...)&#xa;&#xa;Debounces / stabilizes final emitted class" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="650" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_log" value="SessionLogWriter&#xa;--------------------------------&#xa;+ start()&#xa;+ stop()&#xa;+ submit(row)&#xa;&#xa;Persists session CSV logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="800" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="py_sample" value="Sample (dataclass)&#xa;--------------------------------&#xa;timestamp&#xa;packet_counter&#xa;ch1/ch2/ch3&#xa;f1/f2/f3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="960" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="android_group" value="Android Application" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=0;startSize=28;rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="850" y="90" width="760" height="1020" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="main_act" value="MainActivity&#xa;--------------------------------&#xa;+ onCreate()&#xa;+ loadPrefs()&#xa;+ savePrefs()&#xa;&#xa;Configuration screen and diagnostics UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="890" y="150" width="300" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="key_act" value="KeyboardTestActivity&#xa;--------------------------------&#xa;+ onCreate()&#xa;+ dispatchKeyEvent(event)&#xa;&#xa;Manual WASD / keyboard test harness" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="890" y="340" width="300" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="service" value="EmgAccessibilityService&#xa;--------------------------------&#xa;+ onServiceConnected()&#xa;+ handleCommand(command)&#xa;+ moveCursor(dx, dy)&#xa;+ toggleTouchHold()&#xa;+ startTestSquare() / stopTestSquare()&#xa;&#xa;System-wide cursor overlay and gesture control" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="890" y="530" width="300" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="socket_client" value="EmgSocketClient&#xa;--------------------------------&#xa;+ start()&#xa;+ stop()&#xa;+ handleLine(line)&#xa;&#xa;Connects to Python bridge and parses JSON commands" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="150" width="300" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="phone_cmd" value="PhoneCommand (enum)&#xa;--------------------------------&#xa;MOVE_UP&#xa;MOVE_DOWN&#xa;MOVE_LEFT&#xa;MOVE_RIGHT&#xa;TAP&#xa;HOME / BACK / RECENTS / NOTIFICATIONS&#xa;UNKNOWN" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="340" width="300" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cursor_state" value="CursorState&#xa;--------------------------------&#xa;+ move(dx, dy, screenW, screenH)&#xa;+ getX()&#xa;+ getY()&#xa;&#xa;Pure logic for bounded cursor movement" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="570" width="300" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="touch_state" value="TouchHoldState&#xa;--------------------------------&#xa;+ isHeld()&#xa;+ toggle()&#xa;+ reset()&#xa;&#xa;Pure logic for touch hold state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="740" width="300" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="square_seq" value="TestSquareSequence&#xa;--------------------------------&#xa;+ buildSequence(stepsPerSide)&#xa;&#xa;Produces deterministic square path test commands" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="900" width="300" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="conn_diag" value="ConnectionDiagnostics&#xa;--------------------------------&#xa;socketStatus&#xa;lastMessage&#xa;lastCommand&#xa;&#xa;Shared diagnostic state for UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="890" y="780" width="300" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="tests_group" value="Testing" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=0;startSize=28;rounded=1;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="90" width="460" height="420" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="unit_tests" value="Local Unit Tests (test/)&#xa;--------------------------------&#xa;PhoneCommandTest&#xa;CursorStateTest&#xa;TouchHoldStateTest&#xa;TestSquareSequenceTest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="150" width="400" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="android_tests" value="Instrumentation Tests (androidTest/)&#xa;--------------------------------&#xa;MainActivityTest&#xa;KeyboardTestActivityTest&#xa;Navigation / Settings / Broadcast tests" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="320" width="400" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ext_group" value="External Systems" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=0;startSize=28;rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="560" width="460" height="550" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="arduino" value="Arduino / UDL EMG Board&#xa;--------------------------------&#xa;Streams EMG packets over serial" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="620" width="400" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="emulator" value="Android Emulator / Device&#xa;--------------------------------&#xa;Runs Android app and shows overlay cursor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="770" width="400" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="drone" value="Drone Controller Laptop / Pixhawk Endpoint&#xa;--------------------------------&#xa;Receives TCP JSON commands from PixhawkController" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="920" width="400" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="py_emgapp" target="py_reader">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_reader" target="py_sample">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="consumes Sample queue" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_sample" target="py_proc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="uses" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_proc" target="py_pre">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="uses" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_proc" target="py_det">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="uses" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_proc" target="py_stab">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="logs to" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_proc" target="py_log">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="creates / coordinates" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="py_emgapp" target="py_proc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="broadcasts commands" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="py_emgapp" target="py_bridge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="optional drone output" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="py_emgapp" target="py_pix">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e11" value="connects via TCP JSON" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#82b366;" edge="1" parent="1" source="socket_client" target="py_bridge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="creates / owns" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="service" target="socket_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" value="dispatches PhoneCommand" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="socket_client" target="phone_cmd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" value="uses" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="service" target="phone_cmd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" value="opens" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="main_act" target="key_act">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16" value="broadcasts manual commands" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="key_act" target="service">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" value="broadcasts test/start config actions" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="main_act" target="service">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e18" value="reads" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="main_act" target="conn_diag">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e19" value="updates" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="socket_client" target="conn_diag">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e20" value="tested by" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="unit_tests" target="phone_cmd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e21" value="tested by" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="unit_tests" target="cursor_state">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e22" value="tested by" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="unit_tests" target="touch_state">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e23" value="tested by" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="unit_tests" target="square_seq">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24" value="instrumentation tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="android_tests" target="main_act">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e25" value="instrumentation tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="android_tests" target="key_act">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e26" value="USB serial" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#9673a6;" edge="1" parent="1" source="arduino" target="py_reader">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e27" value="runs app/service" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#9673a6;" edge="1" parent="1" source="emulator" target="service">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e28" value="runs UI" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#9673a6;" edge="1" parent="1" source="emulator" target="main_act">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e29" value="TCP JSON" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;strokeColor=#9673a6;" edge="1" parent="1" source="py_pix" target="drone">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
