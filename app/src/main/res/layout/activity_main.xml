@@ -75,12 +75,26 @@
             android:layout_marginTop="12dp"
             android:text="Open Accessibility Settings" />
 
+        <Button
+            android:id="@+id/startTestSquareButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Start Test Square" />
+
+        <Button
+            android:id="@+id/stopTestSquareButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Stop Test Square" />
+
         <TextView
             android:id="@+id/instructionsTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="1. Run your Python EMG app on your laptop.\n2. Enable the EMG Phone Controller accessibility service.\n3. Return here and keep the emulator running.\n4. Trigger your EMG commands to move the cursor and tap." />
+            android:text="1. Enable the accessibility service.\n2. Use Start Test Square for local testing.\n3. Use Python + network later for live EMG input." />
 
     </LinearLayout>
 </ScrollView>

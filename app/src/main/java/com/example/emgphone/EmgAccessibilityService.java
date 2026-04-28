@@ -43,10 +43,26 @@ public class EmgAccessibilityService extends AccessibilityService {
     private int cursorSizePx = 40;
     private boolean paused = false;
 
-    private final BroadcastReceiver reloadReceiver = new BroadcastReceiver() {
+    public static final String ACTION_START_TEST_SQUARE = "com.example.emgphone.START_TEST_SQUARE";
+    public static final String ACTION_STOP_TEST_SQUARE = "com.example.emgphone.STOP_TEST_SQUARE";
+    private boolean testSquareRunning = false;
+    private Thread testSquareThread;
+    private final BroadcastReceiver controlReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            reconnectSocket();
+            if (intent == null || intent.getAction() == null) {
+                return;
+            }
+
+            String action = intent.getAction();
+
+            if (ACTION_RELOAD_SETTINGS.equals(action)) {
+                reconnectSocket();
+            } else if (ACTION_START_TEST_SQUARE.equals(action)) {
+                startTestSquare();
+            } else if (ACTION_STOP_TEST_SQUARE.equals(action)) {
+                stopTestSquare();
+            }
         }
     };
 
@@ -59,7 +75,11 @@ public class EmgAccessibilityService extends AccessibilityService {
 
         createOverlay();
 
-        registerReceiver(reloadReceiver, new IntentFilter(ACTION_RELOAD_SETTINGS));
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_RELOAD_SETTINGS);
+        filter.addAction(ACTION_START_TEST_SQUARE);
+        filter.addAction(ACTION_STOP_TEST_SQUARE);
+        registerReceiver(controlReceiver, filter);
 
         reconnectSocket();
         updateStatus("Service started");
@@ -79,9 +99,11 @@ public class EmgAccessibilityService extends AccessibilityService {
         super.onDestroy();
 
         try {
-            unregisterReceiver(reloadReceiver);
+            unregisterReceiver(controlReceiver);
         } catch (Exception ignored) {
         }
+
+        stopTestSquare();
 
         if (socketClient != null) {
             socketClient.stop();
@@ -251,5 +273,75 @@ public class EmgAccessibilityService extends AccessibilityService {
 
         dispatchGesture(gesture, null, null);
         updateStatus("Tap at (" + tapX + ", " + tapY + ")");
+    }
+
+    private void startTestSquare() {
+        if (testSquareRunning) {
+            updateStatus("Test square already running");
+            return;
+        }
+
+        testSquareRunning = true;
+
+        testSquareThread = new Thread(() -> {
+            try {
+                while (testSquareRunning) {
+                    runTestSquareOnce();
+                    Thread.sleep(1200);
+                }
+            } catch (InterruptedException ignored) {
+            } finally {
+                testSquareRunning = false;
+                mainHandler.post(() -> updateStatus("Test square stopped"));
+            }
+        });
+
+        testSquareThread.setDaemon(true);
+        testSquareThread.start();
+        updateStatus("Test square started");
+    }
+
+    private void stopTestSquare() {
+        testSquareRunning = false;
+        if (testSquareThread != null) {
+            testSquareThread.interrupt();
+            testSquareThread = null;
+        }
+    }
+
+    private void runTestSquareOnce() throws InterruptedException {
+        int stepsPerSide = 8;
+        long moveDelayMs = 250;
+        long tapDelayMs = 450;
+
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(tapDelayMs);
+
+        repeatMove(PhoneCommand.MOVE_RIGHT, stepsPerSide, moveDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(tapDelayMs);
+
+        repeatMove(PhoneCommand.MOVE_DOWN, stepsPerSide, moveDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(tapDelayMs);
+
+        repeatMove(PhoneCommand.MOVE_LEFT, stepsPerSide, moveDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(tapDelayMs);
+
+        repeatMove(PhoneCommand.MOVE_UP, stepsPerSide, moveDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(tapDelayMs);
+    }
+
+    private void repeatMove(PhoneCommand command, int count, long delayMs) throws InterruptedException {
+        for (int i = 0; i < count && testSquareRunning; i++) {
+            performTestCommand(command);
+            Thread.sleep(delayMs);
+        }
+    }
+
+    private void performTestCommand(PhoneCommand command) {
+        mainHandler.post(() -> handleCommand(command));
     }
 }

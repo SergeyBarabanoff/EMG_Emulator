@@ -17,6 +17,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText cursorStepEditText;
     private Button saveButton;
     private Button openAccessibilityButton;
+    private Button startTestSquareButton;
+    private Button stopTestSquareButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
         cursorStepEditText = findViewById(R.id.cursorStepEditText);
         saveButton = findViewById(R.id.saveButton);
         openAccessibilityButton = findViewById(R.id.openAccessibilityButton);
+        startTestSquareButton = findViewById(R.id.startTestSquareButton);
+        stopTestSquareButton = findViewById(R.id.stopTestSquareButton);
 
         loadPrefs();
 
@@ -40,6 +44,16 @@ public class MainActivity extends AppCompatActivity {
         openAccessibilityButton.setOnClickListener(v -> {
             Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
             startActivity(intent);
+        });
+
+        startTestSquareButton.setOnClickListener(v -> {
+            Intent intent = new Intent(EmgAccessibilityService.ACTION_START_TEST_SQUARE);
+            sendBroadcast(intent);
+        });
+
+        stopTestSquareButton.setOnClickListener(v -> {
+            Intent intent = new Intent(EmgAccessibilityService.ACTION_STOP_TEST_SQUARE);
+            sendBroadcast(intent);
         });
     }
 
