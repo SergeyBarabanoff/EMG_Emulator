@@ -22,40 +22,106 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+/**
+ * Accessibility service that drives system-wide phone control for the EMG controller app.
+ *
+ * <p>This service is the core runtime component that:
+ * <ul>
+ *     <li>creates and maintains a visible overlay cursor,</li>
+ *     <li>receives commands from the EMG socket client and local test tools,</li>
+ *     <li>moves the virtual cursor on screen,</li>
+ *     <li>dispatches touch gestures, including touch-hold toggling,</li>
+ *     <li>supports local debugging features such as the test-square sequence.</li>
+ * </ul>
+ *
+ * <p>The service is designed so that both external EMG input and internal manual test input
+ * flow through the same command-handling path.
+ */
 public class EmgAccessibilityService extends AccessibilityService {
 
+    /** SharedPreferences file name used for app settings. */
     public static final String PREFS_NAME = "emg_phone_prefs";
+
+    /** SharedPreferences key for the EMG bridge host. */
     public static final String KEY_HOST = "host";
+
+    /** SharedPreferences key for the EMG bridge port. */
     public static final String KEY_PORT = "port";
+
+    /** SharedPreferences key for the cursor step size in pixels. */
     public static final String KEY_CURSOR_STEP = "cursor_step";
 
+    /** Broadcast action requesting that socket settings be reloaded and the client reconnected. */
     public static final String ACTION_RELOAD_SETTINGS = "com.example.emgphone.RELOAD_SETTINGS";
+
+    /** Broadcast action requesting that the local square-motion test begin. */
     public static final String ACTION_START_TEST_SQUARE = "com.example.emgphone.START_TEST_SQUARE";
+
+    /** Broadcast action requesting that the local square-motion test stop. */
     public static final String ACTION_STOP_TEST_SQUARE = "com.example.emgphone.STOP_TEST_SQUARE";
+
+    /** Broadcast action used to send a manual command from test UI components. */
     public static final String ACTION_MANUAL_COMMAND = "com.example.emgphone.MANUAL_COMMAND";
 
+    /** Window manager used to display and update the accessibility overlay. */
     private WindowManager windowManager;
+
+    /** Root overlay container holding the cursor visuals and status label. */
     private FrameLayout overlayRoot;
+
+    /** Main circular cursor marker representing the virtual finger location. */
     private View cursorDot;
+
+    /** Horizontal crosshair line for improving cursor visibility. */
     private View cursorHorizontal;
+
+    /** Vertical crosshair line for improving cursor visibility. */
     private View cursorVertical;
+
+    /** Status text shown on the overlay for diagnostics and state updates. */
     private TextView statusTextView;
+
+    /** Layout parameters for the overlay window. */
     private WindowManager.LayoutParams overlayParams;
 
+    /** Main-thread handler used to safely update UI-related service state. */
     private Handler mainHandler;
+
+    /** TCP client that receives commands from the EMG classifier application. */
     private EmgSocketClient socketClient;
 
+    /** Current horizontal cursor position in pixels. */
     private int cursorX = 300;
+
+    /** Current vertical cursor position in pixels. */
     private int cursorY = 500;
+
+    /** Diameter of the circular cursor marker in pixels. */
     private int cursorSizePx = 72;
+
+    /** Length of each crosshair line in pixels. */
     private int crosshairLengthPx = 120;
 
+    /** Whether the built-in square test is currently running. */
     private boolean testSquareRunning = false;
+
+    /** Background thread that runs the built-in square test sequence. */
     private Thread testSquareThread;
 
+    /** Whether a touch-hold is currently active. */
     private boolean touchHeld = false;
+
+    /**
+     * Stroke object representing the active held touch, used so the touch can later be released.
+     */
     private GestureDescription.StrokeDescription heldStroke = null;
 
+    /**
+     * Broadcast receiver that handles control actions from the main activity and keyboard test UI.
+     *
+     * <p>Supported broadcasts include settings reload, test-square start/stop, and manual command
+     * dispatch.
+     */
     private final BroadcastReceiver controlReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -79,6 +145,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     };
 
+    /**
+     * Called when the accessibility service is connected and ready to start work.
+     *
+     * <p>This initializes the overlay, registers internal control broadcasts, starts the socket
+     * client, and updates the visible service status.
+     */
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
@@ -99,15 +171,34 @@ public class EmgAccessibilityService extends AccessibilityService {
         updateStatus("Service started");
     }
 
+    /**
+     * Receives accessibility events from the system.
+     *
+     * <p>This implementation does not currently use incoming accessibility events, because control
+     * is driven by socket input and internal test input rather than by analyzing UI events.</p>
+     *
+     * @param event accessibility event supplied by the system
+     */
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
     }
 
+    /**
+     * Called when the accessibility service is interrupted by the system.
+     *
+     * <p>This updates the on-screen status so interruptions are visible during debugging.</p>
+     */
     @Override
     public void onInterrupt() {
         updateStatus("Service interrupted");
     }
 
+    /**
+     * Cleans up service resources when the service is being destroyed.
+     *
+     * <p>This unregisters the internal broadcast receiver, stops the test sequence, stops the
+     * socket client, and removes the overlay from the window manager.</p>
+     */
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -131,6 +222,11 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Recreates the socket client using the latest stored settings and starts it.
+     *
+     * <p>If an existing socket client is running, it is stopped first.</p>
+     */
     private void reconnectSocket() {
         if (socketClient != null) {
             socketClient.stop();
@@ -146,22 +242,52 @@ public class EmgAccessibilityService extends AccessibilityService {
         socketClient.start();
     }
 
+    /**
+     * Returns the shared preferences object containing app settings.
+     *
+     * @return shared preferences for EMG phone settings
+     */
     private SharedPreferences getPrefs() {
         return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
+    /**
+     * Returns the configured EMG bridge host.
+     *
+     * @return host name or IP address, defaulting to {@code 10.0.2.2}
+     */
     private String getHost() {
         return getPrefs().getString(KEY_HOST, "10.0.2.2");
     }
 
+    /**
+     * Returns the configured EMG bridge port.
+     *
+     * @return socket port, defaulting to {@code 8765}
+     */
     private int getPort() {
         return getPrefs().getInt(KEY_PORT, 8765);
     }
 
+    /**
+     * Returns the configured cursor movement step size.
+     *
+     * @return cursor step size in pixels, defaulting to {@code 60}
+     */
     private int getCursorStep() {
         return getPrefs().getInt(KEY_CURSOR_STEP, 60);
     }
 
+    /**
+     * Creates the full-screen accessibility overlay containing the cursor and diagnostics text.
+     *
+     * <p>The overlay includes:
+     * <ul>
+     *     <li>a circular cursor dot,</li>
+     *     <li>horizontal and vertical crosshair lines,</li>
+     *     <li>a small status label in the upper-left corner.</li>
+     * </ul>
+     */
     private void createOverlay() {
         overlayRoot = new FrameLayout(this);
 
@@ -221,6 +347,11 @@ public class EmgAccessibilityService extends AccessibilityService {
         updateCursorVisuals();
     }
 
+    /**
+     * Updates the overlay status label with the supplied text and current touch-hold state.
+     *
+     * @param text status message to display
+     */
     private void updateStatus(String text) {
         if (statusTextView != null) {
             String suffix = touchHeld ? " | TOUCH HELD" : "";
@@ -228,6 +359,11 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Repositions the visual cursor elements to match the current cursor coordinates.
+     *
+     * <p>This updates the dot and crosshair lines so the cursor remains easy to locate on screen.</p>
+     */
     private void updateCursorVisuals() {
         if (cursorDot == null || cursorHorizontal == null || cursorVertical == null) {
             return;
@@ -248,6 +384,14 @@ public class EmgAccessibilityService extends AccessibilityService {
         cursorVertical.setY(centerY - (crosshairLengthPx / 2f));
     }
 
+    /**
+     * Executes a high-level phone command.
+     *
+     * <p>Movement commands reposition the cursor, tap toggles the touch-hold state, and system
+     * commands invoke global accessibility actions such as Home or Recents.</p>
+     *
+     * @param command command to execute
+     */
     private void handleCommand(PhoneCommand command) {
         switch (command) {
             case MOVE_UP:
@@ -288,6 +432,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Moves the cursor by the specified delta while keeping it within screen bounds.
+     *
+     * @param dx horizontal movement delta in pixels
+     * @param dy vertical movement delta in pixels
+     */
     private void moveCursor(int dx, int dy) {
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         int maxX = Math.max(0, displayMetrics.widthPixels - cursorSizePx);
@@ -300,6 +450,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         updateStatus("Cursor: (" + cursorX + ", " + cursorY + ")");
     }
 
+    /**
+     * Toggles between starting and ending a held touch gesture.
+     *
+     * <p>If no touch is currently active, a touch-down gesture is started. If a touch is already
+     * held, the gesture is released.</p>
+     */
     private void toggleTouchHold() {
         if (!touchHeld) {
             startTouchHold();
@@ -308,6 +464,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Starts a long-running touch gesture at the current cursor position.
+     *
+     * <p>This simulates a finger being placed on the screen and held down until
+     * {@link #endTouchHold()} is called.</p>
+     */
     private void startTouchHold() {
         float tapX = cursorX + (cursorSizePx / 2f);
         float tapY = cursorY + (cursorSizePx / 2f);
@@ -331,6 +493,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Ends the currently active held touch gesture.
+     *
+     * <p>If there is no active held touch, the method simply clears the state and reports that no
+     * held touch was available to release.</p>
+     */
     private void endTouchHold() {
         if (heldStroke == null) {
             touchHeld = false;
@@ -362,6 +530,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Starts the built-in square-motion test in a background thread.
+     *
+     * <p>The square test repeatedly moves the cursor in a square and toggles touch at the corners
+     * to verify motion and touch behavior without external EMG input.</p>
+     */
     private void startTestSquare() {
         if (testSquareRunning) {
             updateStatus("Test square already running");
@@ -388,6 +562,9 @@ public class EmgAccessibilityService extends AccessibilityService {
         updateStatus("Test square started");
     }
 
+    /**
+     * Stops the background square-motion test if it is currently running.
+     */
     private void stopTestSquare() {
         testSquareRunning = false;
         if (testSquareThread != null) {
@@ -396,6 +573,14 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Executes one complete square test cycle.
+     *
+     * <p>The sequence toggles touch at each corner and moves the cursor along all four sides of
+     * the square.</p>
+     *
+     * @throws InterruptedException if the sleep between commands is interrupted
+     */
     private void runTestSquareOnce() throws InterruptedException {
         int stepsPerSide = 8;
         long moveDelayMs = 220;
@@ -430,6 +615,14 @@ public class EmgAccessibilityService extends AccessibilityService {
         performTestCommand(PhoneCommand.TAP);
     }
 
+    /**
+     * Repeats a movement command a fixed number of times with a delay between each step.
+     *
+     * @param command movement command to repeat
+     * @param count number of repetitions
+     * @param delayMs delay between repetitions in milliseconds
+     * @throws InterruptedException if interrupted during the delay
+     */
     private void repeatMove(PhoneCommand command, int count, long delayMs) throws InterruptedException {
         for (int i = 0; i < count && testSquareRunning; i++) {
             performTestCommand(command);
@@ -437,6 +630,12 @@ public class EmgAccessibilityService extends AccessibilityService {
         }
     }
 
+    /**
+     * Posts a test command onto the main thread so it is executed through the standard command
+     * handling path.
+     *
+     * @param command command to perform
+     */
     private void performTestCommand(PhoneCommand command) {
         mainHandler.post(() -> handleCommand(command));
     }
