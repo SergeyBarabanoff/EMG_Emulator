@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -27,11 +28,17 @@ public class EmgAccessibilityService extends AccessibilityService {
     public static final String KEY_HOST = "host";
     public static final String KEY_PORT = "port";
     public static final String KEY_CURSOR_STEP = "cursor_step";
+
     public static final String ACTION_RELOAD_SETTINGS = "com.example.emgphone.RELOAD_SETTINGS";
+    public static final String ACTION_START_TEST_SQUARE = "com.example.emgphone.START_TEST_SQUARE";
+    public static final String ACTION_STOP_TEST_SQUARE = "com.example.emgphone.STOP_TEST_SQUARE";
+    public static final String ACTION_MANUAL_COMMAND = "com.example.emgphone.MANUAL_COMMAND";
 
     private WindowManager windowManager;
-    private View overlayRoot;
+    private FrameLayout overlayRoot;
     private View cursorDot;
+    private View cursorHorizontal;
+    private View cursorVertical;
     private TextView statusTextView;
     private WindowManager.LayoutParams overlayParams;
 
@@ -40,13 +47,15 @@ public class EmgAccessibilityService extends AccessibilityService {
 
     private int cursorX = 300;
     private int cursorY = 500;
-    private int cursorSizePx = 40;
-    private boolean paused = false;
+    private int cursorSizePx = 72;
+    private int crosshairLengthPx = 120;
 
-    public static final String ACTION_START_TEST_SQUARE = "com.example.emgphone.START_TEST_SQUARE";
-    public static final String ACTION_STOP_TEST_SQUARE = "com.example.emgphone.STOP_TEST_SQUARE";
     private boolean testSquareRunning = false;
     private Thread testSquareThread;
+
+    private boolean touchHeld = false;
+    private GestureDescription.StrokeDescription heldStroke = null;
+
     private final BroadcastReceiver controlReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -62,6 +71,10 @@ public class EmgAccessibilityService extends AccessibilityService {
                 startTestSquare();
             } else if (ACTION_STOP_TEST_SQUARE.equals(action)) {
                 stopTestSquare();
+            } else if (ACTION_MANUAL_COMMAND.equals(action)) {
+                String raw = intent.getStringExtra("command");
+                PhoneCommand command = PhoneCommand.fromString(raw);
+                handleCommand(command);
             }
         }
     };
@@ -79,6 +92,7 @@ public class EmgAccessibilityService extends AccessibilityService {
         filter.addAction(ACTION_RELOAD_SETTINGS);
         filter.addAction(ACTION_START_TEST_SQUARE);
         filter.addAction(ACTION_STOP_TEST_SQUARE);
+        filter.addAction(ACTION_MANUAL_COMMAND);
         registerReceiver(controlReceiver, filter);
 
         reconnectSocket();
@@ -125,11 +139,7 @@ public class EmgAccessibilityService extends AccessibilityService {
         socketClient = new EmgSocketClient(
                 this::getHost,
                 this::getPort,
-                command -> mainHandler.post(() -> {
-                    if (!paused) {
-                        handleCommand(command);
-                    }
-                }),
+                command -> mainHandler.post(() -> handleCommand(command)),
                 status -> mainHandler.post(() -> updateStatus(status))
         );
 
@@ -153,53 +163,89 @@ public class EmgAccessibilityService extends AccessibilityService {
     }
 
     private void createOverlay() {
-        FrameLayout container = new FrameLayout(this);
-
-        cursorDot = new View(this);
-        cursorDot.setBackgroundColor(Color.RED);
-
-        FrameLayout.LayoutParams cursorLayoutParams =
-                new FrameLayout.LayoutParams(cursorSizePx, cursorSizePx);
-        container.addView(cursorDot, cursorLayoutParams);
-
-        statusTextView = new TextView(this);
-        statusTextView.setTextColor(Color.WHITE);
-        statusTextView.setBackgroundColor(0x99000000);
-        statusTextView.setPadding(16, 8, 16, 8);
-        statusTextView.setText("Waiting...");
-        statusTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-
-        FrameLayout.LayoutParams statusLayoutParams =
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                        FrameLayout.LayoutParams.WRAP_CONTENT
-                );
-        statusLayoutParams.leftMargin = 20;
-        statusLayoutParams.topMargin = 60;
-        container.addView(statusTextView, statusLayoutParams);
+        overlayRoot = new FrameLayout(this);
 
         overlayParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
         );
-
         overlayParams.gravity = Gravity.TOP | Gravity.START;
-        overlayParams.x = cursorX;
-        overlayParams.y = cursorY;
 
-        overlayRoot = container;
+        cursorHorizontal = new View(this);
+        cursorHorizontal.setBackgroundColor(Color.argb(220, 255, 0, 0));
+        FrameLayout.LayoutParams horizontalParams = new FrameLayout.LayoutParams(
+                crosshairLengthPx,
+                6
+        );
+        overlayRoot.addView(cursorHorizontal, horizontalParams);
+
+        cursorVertical = new View(this);
+        cursorVertical.setBackgroundColor(Color.argb(220, 255, 0, 0));
+        FrameLayout.LayoutParams verticalParams = new FrameLayout.LayoutParams(
+                6,
+                crosshairLengthPx
+        );
+        overlayRoot.addView(cursorVertical, verticalParams);
+
+        cursorDot = new View(this);
+        GradientDrawable dotDrawable = new GradientDrawable();
+        dotDrawable.setShape(GradientDrawable.OVAL);
+        dotDrawable.setColor(Color.argb(230, 255, 0, 0));
+        dotDrawable.setStroke(4, Color.WHITE);
+        cursorDot.setBackground(dotDrawable);
+
+        FrameLayout.LayoutParams dotParams = new FrameLayout.LayoutParams(cursorSizePx, cursorSizePx);
+        overlayRoot.addView(cursorDot, dotParams);
+
+        statusTextView = new TextView(this);
+        statusTextView.setTextColor(Color.WHITE);
+        statusTextView.setBackgroundColor(0xAA000000);
+        statusTextView.setPadding(20, 12, 20, 12);
+        statusTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        statusTextView.setText("Waiting...");
+
+        FrameLayout.LayoutParams statusParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        statusParams.leftMargin = 24;
+        statusParams.topMargin = 48;
+        overlayRoot.addView(statusTextView, statusParams);
+
         windowManager.addView(overlayRoot, overlayParams);
+        updateCursorVisuals();
     }
 
     private void updateStatus(String text) {
         if (statusTextView != null) {
-            statusTextView.setText(text);
+            String suffix = touchHeld ? " | TOUCH HELD" : "";
+            statusTextView.setText(text + suffix);
         }
+    }
+
+    private void updateCursorVisuals() {
+        if (cursorDot == null || cursorHorizontal == null || cursorVertical == null) {
+            return;
+        }
+
+        float dotLeft = cursorX;
+        float dotTop = cursorY;
+        float centerX = cursorX + (cursorSizePx / 2f);
+        float centerY = cursorY + (cursorSizePx / 2f);
+
+        cursorDot.setX(dotLeft);
+        cursorDot.setY(dotTop);
+
+        cursorHorizontal.setX(centerX - (crosshairLengthPx / 2f));
+        cursorHorizontal.setY(centerY - 3);
+
+        cursorVertical.setX(centerX - 3);
+        cursorVertical.setY(centerY - (crosshairLengthPx / 2f));
     }
 
     private void handleCommand(PhoneCommand command) {
@@ -217,19 +263,23 @@ public class EmgAccessibilityService extends AccessibilityService {
                 moveCursor(getCursorStep(), 0);
                 break;
             case TAP:
-                tapAtCursor();
+                toggleTouchHold();
                 break;
             case HOME:
                 performGlobalAction(GLOBAL_ACTION_HOME);
+                updateStatus("HOME");
                 break;
             case BACK:
                 performGlobalAction(GLOBAL_ACTION_BACK);
+                updateStatus("BACK");
                 break;
             case RECENTS:
                 performGlobalAction(GLOBAL_ACTION_RECENTS);
+                updateStatus("RECENTS");
                 break;
             case NOTIFICATIONS:
                 performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS);
+                updateStatus("NOTIFICATIONS");
                 break;
             case UNKNOWN:
             default:
@@ -246,33 +296,70 @@ public class EmgAccessibilityService extends AccessibilityService {
         cursorX = Math.min(Math.max(cursorX + dx, 0), maxX);
         cursorY = Math.min(Math.max(cursorY + dy, 0), maxY);
 
-        overlayParams.x = cursorX;
-        overlayParams.y = cursorY;
-
-        if (overlayRoot != null) {
-            windowManager.updateViewLayout(overlayRoot, overlayParams);
-        }
-
+        updateCursorVisuals();
         updateStatus("Cursor: (" + cursorX + ", " + cursorY + ")");
     }
 
-    private void tapAtCursor() {
+    private void toggleTouchHold() {
+        if (!touchHeld) {
+            startTouchHold();
+        } else {
+            endTouchHold();
+        }
+    }
+
+    private void startTouchHold() {
         float tapX = cursorX + (cursorSizePx / 2f);
         float tapY = cursorY + (cursorSizePx / 2f);
 
         Path path = new Path();
         path.moveTo(tapX, tapY);
 
-        GestureDescription.StrokeDescription stroke =
-                new GestureDescription.StrokeDescription(path, 0, 60);
+        heldStroke = new GestureDescription.StrokeDescription(path, 0, 60000, true);
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(heldStroke)
+                .build();
 
-        GestureDescription gesture =
-                new GestureDescription.Builder()
-                        .addStroke(stroke)
-                        .build();
+        boolean ok = dispatchGesture(gesture, null, null);
+        if (ok) {
+            touchHeld = true;
+            updateStatus("Touch DOWN at (" + tapX + ", " + tapY + ")");
+        } else {
+            heldStroke = null;
+            touchHeld = false;
+            updateStatus("Touch DOWN failed");
+        }
+    }
 
-        dispatchGesture(gesture, null, null);
-        updateStatus("Tap at (" + tapX + ", " + tapY + ")");
+    private void endTouchHold() {
+        if (heldStroke == null) {
+            touchHeld = false;
+            updateStatus("No held touch to release");
+            return;
+        }
+
+        float tapX = cursorX + (cursorSizePx / 2f);
+        float tapY = cursorY + (cursorSizePx / 2f);
+
+        Path path = new Path();
+        path.moveTo(tapX, tapY);
+
+        GestureDescription.StrokeDescription endStroke =
+                heldStroke.continueStroke(path, 1, 1, false);
+
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(endStroke)
+                .build();
+
+        boolean ok = dispatchGesture(gesture, null, null);
+        touchHeld = false;
+        heldStroke = null;
+
+        if (ok) {
+            updateStatus("Touch UP at (" + tapX + ", " + tapY + ")");
+        } else {
+            updateStatus("Touch UP failed");
+        }
     }
 
     private void startTestSquare() {
@@ -311,27 +398,36 @@ public class EmgAccessibilityService extends AccessibilityService {
 
     private void runTestSquareOnce() throws InterruptedException {
         int stepsPerSide = 8;
-        long moveDelayMs = 250;
-        long tapDelayMs = 450;
+        long moveDelayMs = 220;
+        long touchDelayMs = 250;
 
         performTestCommand(PhoneCommand.TAP);
-        Thread.sleep(tapDelayMs);
+        Thread.sleep(touchDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(touchDelayMs);
 
         repeatMove(PhoneCommand.MOVE_RIGHT, stepsPerSide, moveDelayMs);
         performTestCommand(PhoneCommand.TAP);
-        Thread.sleep(tapDelayMs);
+        Thread.sleep(touchDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(touchDelayMs);
 
         repeatMove(PhoneCommand.MOVE_DOWN, stepsPerSide, moveDelayMs);
         performTestCommand(PhoneCommand.TAP);
-        Thread.sleep(tapDelayMs);
+        Thread.sleep(touchDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(touchDelayMs);
 
         repeatMove(PhoneCommand.MOVE_LEFT, stepsPerSide, moveDelayMs);
         performTestCommand(PhoneCommand.TAP);
-        Thread.sleep(tapDelayMs);
+        Thread.sleep(touchDelayMs);
+        performTestCommand(PhoneCommand.TAP);
+        Thread.sleep(touchDelayMs);
 
         repeatMove(PhoneCommand.MOVE_UP, stepsPerSide, moveDelayMs);
         performTestCommand(PhoneCommand.TAP);
-        Thread.sleep(tapDelayMs);
+        Thread.sleep(touchDelayMs);
+        performTestCommand(PhoneCommand.TAP);
     }
 
     private void repeatMove(PhoneCommand command, int count, long delayMs) throws InterruptedException {
